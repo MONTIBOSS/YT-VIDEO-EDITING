@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudioCut - YouTube Video Editor</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        ytRed: '#FF0000',
+                        ytDark: '#0f0f0f',
+                        ytGray: '#212121',
+                        ytLightGray: '#3f3f3f',
+                        ytAccent: '#3ea6ff'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f0f0f; }
+        ::-webkit-scrollbar-thumb { background: #3f3f3f; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        .canvas-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            position: relative;
+            overflow: hidden;
+        }
+        /* Custom styling for range sliders */
+        input[type=range] {
+            accent-color: #FF0000;
+        }
+    </style>
+</head>
+<body class="bg-ytDark text-gray-100 h-screen flex flex-col overflow-hidden select-none">
+
+    <header class="h-14 bg-ytGray border-b border-ytLightGray/40 px-4 flex items-center justify-between z-20">
+        <div class="flex items-center gap-3">
+            <div class="bg-ytRed text-white p-1.5 rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-video text-lg"></i>
+            </div>
+            <span class="font-bold text-lg tracking-wide bg-gradient-to-r from-red-500 to-amber-500 bg-clip-text text-transparent">
+                StudioCut Pro
+            </span>
+            <span class="text-xs bg-red-950 text-red-400 border border-red-800 px-2 py-0.5 rounded-full font-medium hidden sm:inline-block">
+                YouTube Creator Suite
+            </span>
+        </div>
+
+        <!-- Aspect Ratio Selection & Project Controls -->
+        <div class="flex items-center gap-3">
+            <div class="bg-ytDark px-3 py-1 rounded-lg border border-ytLightGray flex items-center gap-2">
+                <i class="fa-solid fa-crop text-xs text-gray-400"></i>
+                <label class="text-xs text-gray-400">Ratio:</label>
+                <select id="aspectRatioSelect" class="bg-transparent text-xs font-semibold text-white focus:outline-none cursor-pointer">
+                    <option value="16:9" class="bg-ytGray">16:9 (YouTube Main)</option>
+                    <option value="9:16" class="bg-ytGray">9:16 (YouTube Shorts)</option>
+                    <option value="1:1" class="bg-ytGray">1:1 (Square)</option>
+                    <option value="4:3" class="bg-ytGray">4:3 (Standard)</option>
+                </select>
+            </div>
+
+            <button id="exportBtn" class="bg-ytRed hover:bg-red-700 text-white font-medium px-4 py-1.5 rounded-lg text-sm flex items-center gap-2 transition shadow-lg shadow-red-900/30">
+                <i class="fa-solid fa-file-export"></i> Export Video
+            </button>
+        </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden">
+        
+        <aside class="w-16 sm:w-64 bg-ytGray border-r border-ytLightGray/40 flex flex-col z-10 shrink-0">
+            <!-- Sidebar Navigation Tabs -->
+            <div class="flex border-b border-ytLightGray/40 bg-ytDark/50 text-xs font-medium">
+                <button id="tabAssets" class="flex-1 py-3 text-center border-b-2 border-ytRed text-white font-semibold">
+                    <i class="fa-solid fa-folder-open sm:mr-1"></i> <span class="hidden sm:inline">Media</span>
+                </button>
+                <button id="tabEffects" class="flex-1 py-3 text-center text-gray-400 hover:text-white border-b-2 border-transparent">
+                    <i class="fa-solid fa-wand-magic-sparkles sm:mr-1"></i> <span class="hidden sm:inline">Effects</span>
+                </button>
+                <button id="tabText" class="flex-1 py-3 text-center text-gray-400 hover:text-white border-b-2 border-transparent">
+                    <i class="fa-solid fa-font sm:mr-1"></i> <span class="hidden sm:inline">Text</span>
+                </button>
+            </div>
+
+            <!-- TAB CONTENT PANELS -->
+            <div class="flex-1 overflow-y-auto p-3 space-y-4">
+                
+                <!-- 1. Media Assets Tab -->
+                <div id="panelAssets" class="space-y-4">
+                    <div class="border-2 border-dashed border-ytLightGray hover:border-ytRed rounded-xl p-4 text-center cursor-pointer transition bg-ytDark/30" id="dropZone">
+                        <i class="fa-solid fa-cloud-arrow-up text-2xl text-red-500 mb-2"></i>
+                        <p class="text-xs text-gray-300 font-medium">Upload Media Clips</p>
+                        <p class="text-[10px] text-gray-500 mt-1">MP4, WEBM, MP3, PNG, JPG</p>
+                        <input type="file" id="mediaFileInput" accept="video/*,audio/*,image/*" class="hidden" multiple>
+                    </div>
+
+                    <div>
+                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Project Media</h4>
+                        <div id="mediaList" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                            <p class="text-xs text-gray-500 italic text-center py-4">No media uploaded yet.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Effects Panel -->
+                <div id="panelEffects" class="hidden space-y-4 text-xs">
+                    <h4 class="font-bold text-gray-400 uppercase tracking-wider">Video Adjustments</h4>
+                    
+                    <div class="space-y-3 bg-ytDark/40 p-3 rounded-lg border border-ytLightGray/30">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span>Brightness</span>
+                                <span id="valBrightness">100%</span>
+                            </div>
+                            <input type="range" id="filterBrightness" min="0" max="200" value="100" class="w-full">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span>Contrast</span>
+                                <span id="valContrast">100%</span>
+                            </div>
+                            <input type="range" id="filterContrast" min="0" max="200" value="100" class="w-full">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span>Saturation</span>
+                                <span id="valSaturate">100%</span>
+                            </div>
+                            <input type="range" id="filterSaturate" min="0" max="200" value="100" class="w-full">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span>Blur</span>
+                                <span id="valBlur">0px</span>
+                            </div>
+                            <input type="range" id="filterBlur" min="0" max="10" value="0" step="0.5" class="w-full">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span>Sepia</span>
+                                <span id="valSepia">0%</span>
+                            </div>
+                            <input type="range" id="filterSepia" min="0" max="100" value="0" class="w-full">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span>Invert</span>
+                                <span id="valInvert">0%</span>
+                            </div>
+                            <input type="range" id="filterInvert" min="0" max="100" value="0" class="w-full">
+                        </div>
+
+                        <button id="resetFiltersBtn" class="w-full py-1.5 bg-ytLightGray hover:bg-gray-600 rounded text-xs font-medium transition">
+                            Reset Filters
+                        </button>
+                    </div>
+
+                    <h4 class="font-bold text-gray-400 uppercase tracking-wider mt-4">Playback Speed</h4>
+                    <div class="grid grid-cols-4 gap-1">
+                        <button class="speed-btn py-1 bg-ytDark border border-ytLightGray rounded hover:bg-ytRed" data-speed="0.5">0.5x</button>
+                        <button class="speed-btn py-1 bg-ytRed border border-ytLightGray rounded font-bold" data-speed="1.0">1.0x</button>
+                        <button class="speed-btn py-1 bg-ytDark border border-ytLightGray rounded hover:bg-ytRed" data-speed="1.5">1.5x</button>
+                        <button class="speed-btn py-1 bg-ytDark border border-ytLightGray rounded hover:bg-ytRed" data-speed="2.0">2.0x</button>
+                    </div>
+                </div>
+
+                <!-- 3. Text Overlay Tab -->
+                <div id="panelText" class="hidden space-y-4 text-xs">
+                    <h4 class="font-bold text-gray-400 uppercase tracking-wider">Subtitles & Titles</h4>
+                    
+                    <div class="space-y-3 bg-ytDark/40 p-3 rounded-lg border border-ytLightGray/30">
+                        <div>
+                            <label class="block mb-1 text-gray-300">Text Content</label>
+                            <input type="text" id="textOverlayInput" value="Subscribe Now!" class="w-full bg-ytDark border border-ytLightGray rounded p-2 text-white focus:border-ytRed focus:outline-none">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block mb-1 text-gray-300">Font Size</label>
+                                <input type="number" id="textSizeInput" value="48" min="12" max="120" class="w-full bg-ytDark border border-ytLightGray rounded p-1.5 text-white">
+                            </div>
+                            <div>
+                                <label class="block mb-1 text-gray-300">Font Style</label>
+                                <select id="textFontInput" class="w-full bg-ytDark border border-ytLightGray rounded p-1.5 text-white">
+                                    <option value="Inter">Inter</option>
+                                    <option value="Impact">Impact</option>
+                                    <option value="Arial">Arial</option>
+                                    <option value="Courier New">Courier</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block mb-1 text-gray-300">Text Color</label>
+                                <input type="color" id="textColorInput" value="#FFFFFF" class="w-full h-8 bg-ytDark border border-ytLightGray rounded cursor-pointer">
+                            </div>
+                            <div>
+                                <label class="block mb-1 text-gray-300">Bg Color</label>
+                                <input type="color" id="textBgColorInput" value="#000000" class="w-full h-8 bg-ytDark border border-ytLightGray rounded cursor-pointer">
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2 pt-1">
+                            <input type="checkbox" id="textShowBg" checked class="rounded border-ytLightGray text-ytRed focus:ring-0">
+                            <label for="textShowBg" class="text-gray-300">Show Background Banner</label>
+                        </div>
+
+                        <div>
+                            <label class="block mb-1 text-gray-300">Position Y</label>
+                            <input type="range" id="textPosY" min="10" max="90" value="80" class="w-full">
+                        </div>
+
+                        <button id="addTextTrackBtn" class="w-full py-2 bg-ytRed hover:bg-red-700 text-white font-semibold rounded transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-plus"></i> Add Subtitle Layer
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col bg-black overflow-hidden relative">
+            
+            <!-- Video Preview Stage -->
+            <div class="flex-1 flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-b from-ytDark to-black">
+                <div id="canvasWrapper" class="canvas-container rounded-lg shadow-2xl border border-ytLightGray/30 relative max-h-full max-w-full">
+                    <canvas id="previewCanvas" class="w-full h-full object-contain"></canvas>
+                    
+                    <!-- Live overlay status -->
+                    <div id="statusBadge" class="absolute top-3 left-3 bg-red-600/80 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest hidden">
+                        REC Rendering
+                    </div>
+                </div>
+            </div>
+
+            <!-- Player Controls Toolbar -->
+            <div class="h-12 bg-ytGray border-t border-ytLightGray/40 px-4 flex items-center justify-between text-xs">
+                <div class="flex items-center gap-4">
+                    <button id="btnPlayPause" class="w-8 h-8 rounded-full bg-ytRed text-white flex items-center justify-center hover:scale-105 transition">
+                        <i class="fa-solid fa-play"></i>
+                    </button>
+
+                    <button id="btnStop" class="text-gray-400 hover:text-white transition">
+                        <i class="fa-solid fa-square"></i>
+                    </button>
+
+                    <!-- Timecode Display -->
+                    <div class="font-mono text-gray-300">
+                        <span id="currentTime">00:00.0</span> / <span id="totalDuration">00:00.0</span>
+                    </div>
+                </div>
+
+                <!-- Audio Mixer Quick Controls -->
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-film text-gray-400"></i>
+                        <input type="range" id="videoVolume" min="0" max="100" value="100" class="w-16 sm:w-24">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-music text-amber-400"></i>
+                        <input type="range" id="audioVolume" min="0" max="100" value="80" class="w-16 sm:w-24">
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <footer class="h-64 bg-ytDark border-t border-ytLightGray/60 flex flex-col z-20">
+        
+        <!-- Timeline Controls Header -->
+        <div class="h-10 bg-ytGray/70 px-4 flex items-center justify-between border-b border-ytLightGray/40 text-xs">
+            <div class="flex items-center gap-2">
+                <button id="btnSplit" class="px-2.5 py-1 bg-ytLightGray hover:bg-gray-600 text-white rounded flex items-center gap-1 transition">
+                    <i class="fa-solid fa-scissors text-red-400"></i> Split Clip
+                </button>
+                <button id="btnDeleteTrack" class="px-2.5 py-1 bg-ytLightGray hover:bg-red-900/50 text-white rounded flex items-center gap-1 transition">
+                    <i class="fa-solid fa-trash text-gray-400"></i> Delete
+                </button>
+            </div>
+
+            <div class="text-gray-400 text-[11px] font-medium hidden sm:block">
+                Drag clip handles to trim • Click timeline to scrub playhead
+            </div>
+
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-magnifying-glass-minus text-gray-400"></i>
+                <input type="range" id="timelineZoom" min="10" max="100" value="30" class="w-20">
+                <i class="fa-solid fa-magnifying-glass-plus text-gray-400"></i>
+            </div>
+        </div>
+
+        <!-- Timeline Track Container -->
+        <div id="timelineContainer" class="flex-1 overflow-x-auto overflow-y-auto p-2 relative bg-neutral-950">
+            
+            <!-- Playhead Scrub Line -->
+            <div id="playhead" class="absolute top-0 bottom-0 w-0.5 bg-red-500 z-30 pointer-events-none flex flex-col items-center" style="left: 0px;">
+                <div class="w-3 h-3 bg-red-500 rotate-45 -mt-1.5 shadow"></div>
+            </div>
+
+            <div id="tracksWrapper" class="space-y-2 min-w-full w-max pr-12 pt-2">
+                
+                <!-- Track 1: Subtitle / Text Track -->
+                <div class="flex items-center gap-2">
+                    <div class="w-20 text-[11px] font-bold text-sky-400 flex items-center gap-1 shrink-0">
+                        <i class="fa-solid fa-font"></i> Subtitles
+                    </div>
+                    <div id="textTrack" class="track-line flex-1 h-10 bg-ytGray/40 border border-ytLightGray/30 rounded relative min-w-[800px]">
+                        <!-- Dynamic text clips inserted here -->
+                    </div>
+                </div>
+
+                <!-- Track 2: Video Track -->
+                <div class="flex items-center gap-2">
+                    <div class="w-20 text-[11px] font-bold text-red-500 flex items-center gap-1 shrink-0">
+                        <i class="fa-solid fa-video"></i> Video
+                    </div>
+                    <div id="videoTrack" class="track-line flex-1 h-12 bg-ytGray/40 border border-ytLightGray/30 rounded relative min-w-[800px]">
+                        <!-- Dynamic video clips inserted here -->
+                    </div>
+                </div>
+
+                <!-- Track 3: Audio Music Track -->
+                <div class="flex items-center gap-2">
+                    <div class="w-20 text-[11px] font-bold text-amber-400 flex items-center gap-1 shrink-0">
+                        <i class="fa-solid fa-music"></i> BGM
+                    </div>
+                    <div id="audioTrack" class="track-line flex-1 h-10 bg-ytGray/40 border border-ytLightGray/30 rounded relative min-w-[800px]">
+                        <!-- Dynamic audio clips inserted here -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </footer>
+
+    <!-- Export Modal -->
+    <div id="exportModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-ytGray border border-ytLightGray p-6 rounded-xl w-96 max-w-full text-center space-y-4">
+            <i class="fa-solid fa-circle-notch fa-spin text-4xl text-ytRed" id="exportSpinner"></i>
+            <h3 class="text-lg font-bold" id="exportTitle">Rendering Video...</h3>
+            <p class="text-xs text-gray-400" id="exportStatus">Recording timeline composition to WEBM/MP4 format.</p>
+            
+            <div id="exportDownloadContainer" class="hidden space-y-3">
+                <a id="downloadVideoBtn" download="StudioCut_Export.webm" href="#" class="block w-full py-2 bg-ytRed hover:bg-red-700 font-bold rounded-lg text-sm transition">
+                    <i class="fa-solid fa-download"></i> Download Video
+                </a>
+                <button id="closeExportBtn" class="w-full py-2 bg-ytLightGray hover:bg-gray-600 font-medium rounded-lg text-xs">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Video / Audio elements storage -->
+    <div id="mediaStorage" class="hidden"></div>
+
+    <script>
+        // State Management
+        const state = {
+            isPlaying: false,
+            currentTime: 0,
+            duration: 10, // default timeline width in seconds
+            zoomScale: 30, // pixels per second
+            aspectRatio: '16:9',
+            selectedTrackId: null,
+            tracks: {
+                video: [],
+                audio: [],
+                text: []
+            },
+            filters: {
+                brightness: 100,
+                contrast: 100,
+                saturate: 100,
+                blur: 0,
+                sepia: 0,
+                invert: 0
+            },
+            playbackSpeed: 1.0,
+            recording: false
+        };
+
+        // DOM Element References
+        const canvas = document.getElementById('previewCanvas');
+        const ctx = canvas.getContext('2d');
+        const playhead = document.getElementById('playhead');
+        const timelineContainer = document.getElementById('timelineContainer');
+        const mediaFileInput = document.getElementById('mediaFileInput');
+        const mediaList = document.getElementById('mediaList');
+        const mediaStorage = document.getElementById('mediaStorage');
+
+        // Initial setup
+        window.onload = function() {
+            setCanvasDimensions();
+            setupEventListeners();
+            startRenderLoop();
+        };
+
+        function setCanvasDimensions() {
+            const container = document.getElementById('canvasWrapper');
+            let w = 1280, h = 720;
+            if (state.aspectRatio === '9:16') { w = 720; h = 1280; }
+            else if (state.aspectRatio === '1:1') { w = 1000; h = 1000; }
+            else if (state.aspectRatio === '4:3') { w = 1024; h = 768; }
+
+            canvas.width = w;
+            canvas.height = h;
+
+            // Adjust display container aspect
+            const wrapperAspect = w / h;
+            container.style.aspectRatio = `${w} / ${h}`;
+            if (w < h) {
+                container.style.height = '80%';
+                container.style.width = 'auto';
+            } else {
+                container.style.width = '85%';
+                container.style.height = 'auto';
+            }
+        }
+
+        function startRenderLoop() {
+            let lastTime = performance.now();
+
+            function frame(now) {
+                const dt = (now - lastTime) / 1000;
+                lastTime = now;
+
+                if (state.isPlaying) {
+                    state.currentTime += dt * state.playbackSpeed;
+                    if (state.currentTime >= state.duration) {
+                        state.currentTime = 0; // Loop or stop
+                    }
+                    updatePlayheadPosition();
+                }
+
+                renderCanvas();
+                requestAnimationFrame(frame);
+            }
+            requestAnimationFrame(frame);
+        }
+
+        function renderCanvas() {
+            // 1. Clear background
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 2. Apply Video Filter Adjustments
+            ctx.filter = `
+                brightness(${state.filters.brightness}%) 
+                contrast(${state.filters.contrast}%) 
+                saturate(${state.filters.saturate}%) 
+                blur(${state.filters.blur}px)
+                sepia(${state.filters.sepia}%)
+                invert(${state.filters.invert}%)
+            `;
+
+            // 3. Render Active Video Clip
+            const activeVideo = state.tracks.video.find(clip => 
+                state.currentTime >= clip.startTime && state.currentTime <= (clip.startTime + clip.duration)
+            );
+
+            if (activeVideo && activeVideo.element) {
+                const vidEl = activeVideo.element;
+                const offsetTime = state.currentTime - clipStartOffset(activeVideo);
+                
+                // Sync video playback element time
+                if (Math.abs(vidEl.currentTime - offsetTime) > 0.3) {
+                    vidEl.currentTime = offsetTime;
+                }
+                if (state.isPlaying && vidEl.paused) vidEl.play();
+                else if (!state.isPlaying && !vidEl.paused) vidEl.pause();
+
+                // Draw video frame
+                ctx.drawImage(vidEl, 0, 0, canvas.width, canvas.height);
+            }
+
+            // Reset filters for overlay text
+            ctx.filter = 'none';
+
+            // 4. Render Active Audio Clips Sync
+            const activeAudio = state.tracks.audio.find(clip => 
+                state.currentTime >= clip.startTime && state.currentTime <= (clip.startTime + clip.duration)
+            );
+            if (activeAudio && activeAudio.element) {
+                const audEl = activeAudio.element;
+                const offsetTime = state.currentTime - clipStartOffset(activeAudio);
+                if (Math.abs(audEl.currentTime - offsetTime) > 0.3) audEl.currentTime = offsetTime;
+                if (state.isPlaying && audEl.paused) audEl.play();
+                else if (!state.isPlaying && !audEl.paused) audEl.pause();
+            }
+
+            // 5. Render Subtitle Text Overlays
+            state.tracks.text.forEach(textClip => {
+                if (state.currentTime >= textClip.startTime && state.currentTime <= (textClip.startTime + textClip.duration)) {
+                    ctx.font = `${textClip.style.bold ? 'bold' : ''} ${textClip.style.size}px ${textClip.style.font}`;
+                    ctx.textAlign = 'center';
+                    
+                    const posX = canvas.width / 2;
+                    const posY = (canvas.height * textClip.posY) / 100;
+
+                    if (textClip.style.showBg) {
+                        const metrics = ctx.measureText(textClip.text);
+                        const padding = 16;
+                        ctx.fillStyle = textClip.style.bgColor;
+                        ctx.fillRect(
+                            posX - metrics.width / 2 - padding, 
+                            posY - textClip.style.size + 4, 
+                            metrics.width + (padding * 2), 
+                            textClip.style.size + padding
+                        );
+                    }
+
+                    ctx.fillStyle = textClip.style.color;
+                    ctx.fillText(textClip.text, posX, posY);
+                }
+            });
+
+            // Update Time code display
+            document.getElementById('currentTime').textContent = formatTime(state.currentTime);
+            document.getElementById('totalDuration').textContent = formatTime(state.duration);
+        }
+
+        function clipStartOffset(clip) {
+            return clip.startTime - clip.trimStart;
+        }
+
+        function setupEventListeners() {
+            // Play / Pause Toggle
+            document.getElementById('btnPlayPause').onclick = () => {
+                state.isPlaying = !state.isPlaying;
+                const icon = document.getElementById('btnPlayPause').querySelector('i');
+                icon.className = state.isPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play';
+            };
+
+            document.getElementById('btnStop').onclick = () => {
+                state.isPlaying = false;
+                state.currentTime = 0;
+                updatePlayheadPosition();
+                document.getElementById('btnPlayPause').querySelector('i').className = 'fa-solid fa-play';
+            };
+
+            // Aspect Ratio change
+            document.getElementById('aspectRatioSelect').onchange = (e) => {
+                state.aspectRatio = e.target.value;
+                setCanvasDimensions();
+            };
+
+            // Sidebar Tabs
+            const tabs = [
+                { btn: 'tabAssets', panel: 'panelAssets' },
+                { btn: 'tabEffects', panel: 'panelEffects' },
+                { btn: 'tabText', panel: 'panelText' }
+            ];
+
+            tabs.forEach(tab => {
+                document.getElementById(tab.btn).onclick = () => {
+                    tabs.forEach(t => {
+                        document.getElementById(t.btn).classList.remove('border-ytRed', 'text-white', 'font-semibold');
+                        document.getElementById(t.btn).classList.add('text-gray-400', 'border-transparent');
+                        document.getElementById(t.panel).classList.add('hidden');
+                    });
+                    document.getElementById(tab.btn).classList.add('border-ytRed', 'text-white', 'font-semibold');
+                    document.getElementById(tab.panel).classList.remove('hidden');
+                };
+            });
+
+            // Upload handling
+            const dropZone = document.getElementById('dropZone');
+            dropZone.onclick = () => mediaFileInput.click();
+            mediaFileInput.onchange = (e) => handleFiles(e.target.files);
+
+            // Filter controls
+            const filtersMap = ['Brightness', 'Contrast', 'Saturate', 'Blur', 'Sepia', 'Invert'];
+            filtersMap.forEach(f => {
+                const slider = document.getElementById(`filter${f}`);
+                slider.oninput = (e) => {
+                    state.filters[f.toLowerCase()] = e.target.value;
+                    document.getElementById(`val${f}`).textContent = e.target.value + (f === 'Blur' ? 'px' : '%');
+                };
+            });
+
+            document.getElementById('resetFiltersBtn').onclick = () => {
+                filtersMap.forEach(f => {
+                    const defaultVal = (f === 'Brightness' || f === 'Contrast' || f === 'Saturate') ? 100 : 0;
+                    state.filters[f.toLowerCase()] = defaultVal;
+                    document.getElementById(`filter${f}`).value = defaultVal;
+                    document.getElementById(`val${f}`).textContent = defaultVal + (f === 'Blur' ? 'px' : '%');
+                });
+            };
+
+            // Speed Control
+            document.querySelectorAll('.speed-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    document.querySelectorAll('.speed-btn').forEach(b => b.classList.replace('bg-ytRed', 'bg-ytDark'));
+                    btn.classList.replace('bg-ytDark', 'bg-ytRed');
+                    state.playbackSpeed = parseFloat(btn.getAttribute('data-speed'));
+                };
+            });
+
+            // Timeline scrubbing
+            timelineContainer.onclick = (e) => {
+                const rect = timelineContainer.getBoundingClientRect();
+                const clickX = e.clientX - rect.left + timelineContainer.scrollLeft - 80; // Offset for track labels
+                if (clickX >= 0) {
+                    state.currentTime = clickX / state.zoomScale;
+                    if (state.currentTime > state.duration) state.currentTime = state.duration;
+                    updatePlayheadPosition();
+                }
+            };
+
+            // Zoom timeline
+            document.getElementById('timelineZoom').oninput = (e) => {
+                state.zoomScale = parseInt(e.target.value);
+                renderTimeline();
+                updatePlayheadPosition();
+            };
+
+            // Text track addition
+            document.getElementById('addTextTrackBtn').onclick = addTextOverlayTrack;
+
+            // Volume Controls
+            document.getElementById('videoVolume').oninput = (e) => {
+                const vol = e.target.value / 100;
+                state.tracks.video.forEach(v => { if(v.element) v.element.volume = vol; });
+            };
+            document.getElementById('audioVolume').oninput = (e) => {
+                const vol = e.target.value / 100;
+                state.tracks.audio.forEach(a => { if(a.element) a.element.volume = vol; });
+            };
+
+            // Export Video Engine Trigger
+            document.getElementById('exportBtn').onclick = exportRenderedVideo;
+            document.getElementById('closeExportBtn').onclick = () => {
+                document.getElementById('exportModal').classList.add('hidden');
+            };
+        }
+
+        function handleFiles(files) {
+            if (!files.length) return;
+            const mediaListEl = document.getElementById('mediaList');
+            if (mediaListEl.querySelector('p')) mediaListEl.innerHTML = '';
+
+            Array.from(files).forEach(file => {
+                const fileUrl = URL.createObjectURL(file);
+                const isVideo = file.type.startsWith('video');
+                const isAudio = file.type.startsWith('audio');
+
+                // Media Storage setup
+                let mediaEl;
+                if (isVideo) {
+                    mediaEl = document.createElement('video');
+                    mediaEl.src = fileUrl;
+                    mediaEl.preload = 'auto';
+                } else if (isAudio) {
+                    mediaEl = document.createElement('audio');
+                    mediaEl.src = fileUrl;
+                }
+                if (mediaEl) mediaStorage.appendChild(mediaEl);
+
+                // Build sidebar asset item
+                const card = document.createElement('div');
+                card.className = "bg-ytDark/80 p-2 rounded border border-ytLightGray/40 flex items-center justify-between text-xs";
+                card.innerHTML = `
+                    <div class="flex items-center gap-2 overflow-hidden pr-2">
+                        <i class="fa-solid ${isVideo ? 'fa-video text-red-400' : 'fa-music text-amber-400'}"></i>
+                        <span class="truncate">${file.name}</span>
+                    </div>
+                    <button class="bg-ytRed hover:bg-red-700 px-2 py-1 rounded text-[10px] font-bold shrink-0">
+                        + Add
+                    </button>
+                `;
+
+                card.querySelector('button').onclick = () => {
+                    addToTimeline(file.name, fileUrl, isVideo ? 'video' : 'audio', mediaEl);
+                };
+
+                mediaListEl.appendChild(card);
+            });
+        }
+
+        function addToTimeline(name, url, type, element) {
+            const id = 'clip_' + Date.now();
+            const clipDuration = 5; // Default 5 seconds for new added clips
+
+            const clipObj = {
+                id,
+                name,
+                url,
+                type,
+                startTime: 0,
+                duration: clipDuration,
+                trimStart: 0,
+                element
+            };
+
+            state.tracks[type].push(clipObj);
+            
+            // Adjust max timeline duration
+            const maxEndTime = clipObj.startTime + clipObj.duration;
+            if (maxEndTime > state.duration) state.duration = maxEndTime + 5;
+
+            renderTimeline();
+        }
+
+        function addTextOverlayTrack() {
+            const textContent = document.getElementById('textOverlayInput').value || 'Subtitle';
+            const clipObj = {
+                id: 'text_' + Date.now(),
+                name: textContent,
+                text: textContent,
+                type: 'text',
+                startTime: 0,
+                duration: 4,
+                posY: parseInt(document.getElementById('textPosY').value),
+                style: {
+                    size: parseInt(document.getElementById('textSizeInput').value),
+                    font: document.getElementById('textFontInput').value,
+                    color: document.getElementById('textColorInput').value,
+                    bgColor: document.getElementById('textBgColorInput').value,
+                    showBg: document.getElementById('textShowBg').checked
+                }
+            };
+
+            state.tracks.text.push(clipObj);
+            renderTimeline();
+        }
+
+        function renderTimeline() {
+            const tracks = ['text', 'video', 'audio'];
+            
+            tracks.forEach(t => {
+                const trackEl = document.getElementById(`${t}Track`);
+                trackEl.innerHTML = ''; // clear timeline line
+
+                state.tracks[t].forEach(clip => {
+                    const clipEl = document.createElement('div');
+                    const leftPos = clip.startTime * state.zoomScale;
+                    const widthPos = clip.duration * state.zoomScale;
+
+                    clipEl.className = `absolute top-1 bottom-1 rounded px-2 text-[10px] flex items-center justify-between font-medium cursor-pointer border select-none ${
+                        t === 'video' ? 'bg-red-900/60 border-red-500 text-red-100' :
+                        t === 'audio' ? 'bg-amber-900/60 border-amber-500 text-amber-100' :
+                        'bg-sky-900/60 border-sky-500 text-sky-100'
+                    }`;
+                    clipEl.style.left = `${leftPos}px`;
+                    clipEl.style.width = `${widthPos}px`;
+
+                    clipEl.innerHTML = `
+                        <span class="truncate pointer-events-none">${clip.name}</span>
+                        <i class="fa-solid fa-xmark text-gray-300 hover:text-white cursor-pointer ml-1" data-del="${clip.id}"></i>
+                    `;
+
+                    // Delete clip listener
+                    clipEl.querySelector('[data-del]').onclick = (e) => {
+                        e.stopPropagation();
+                        state.tracks[t] = state.tracks[t].filter(c => c.id !== clip.id);
+                        renderTimeline();
+                    };
+
+                    trackEl.appendChild(clipEl);
+                });
+            });
+        }
+
+        function updatePlayheadPosition() {
+            const playheadPos = (state.currentTime * state.zoomScale) + 80; // track label offset
+            playhead.style.left = `${playheadPos}px`;
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = (seconds % 60).toFixed(1);
+            return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        function exportRenderedVideo() {
+            const modal = document.getElementById('exportModal');
+            const spinner = document.getElementById('exportSpinner');
+            const title = document.getElementById('exportTitle');
+            const status = document.getElementById('exportStatus');
+            const downloadBox = document.getElementById('exportDownloadContainer');
+
+            modal.classList.remove('hidden');
+            downloadBox.classList.add('hidden');
+            spinner.classList.remove('hidden');
+            title.textContent = "Rendering & Exporting Video...";
+            status.textContent = "Please wait while we record your video canvas timeline.";
+
+            // Reset playback to start
+            state.currentTime = 0;
+            state.isPlaying = true;
+
+            const stream = canvas.captureStream(30); // 30 FPS
+            let mediaRecorder;
+            const chunks = [];
+
+            try {
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+            } catch (e) {
+                mediaRecorder = new MediaRecorder(stream);
+            }
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) chunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const videoUrl = URL.createObjectURL(blob);
+                
+                spinner.classList.add('hidden');
+                title.textContent = "Export Ready!";
+                status.textContent = "Your video rendered successfully.";
+                
+                const downloadBtn = document.getElementById('downloadVideoBtn');
+                downloadBtn.href = videoUrl;
+                downloadBox.classList.remove('hidden');
+
+                state.isPlaying = false;
+            };
+
+            mediaRecorder.start();
+
+            // Auto stop recording at end of timeline duration
+            const checkEnd = setInterval(() => {
+                if (state.currentTime >= state.duration) {
+                    mediaRecorder.stop();
+                    clearInterval(checkEnd);
+                }
+            }, 200);
+        }
+    </script>
+</body>
+</html>
